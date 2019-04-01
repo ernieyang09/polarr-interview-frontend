@@ -13,10 +13,16 @@ class App extends Component {
   }
 
 
+
   render() {
+    var test = JSON.parse(localStorage.getItem('records'));
     return (
       <div>
-        <Ripple container={this.container}>
+        <div>
+          <input type="button" value="record" onClick={()=> this.setState({ record: true })} />
+          <input type="button" value="stop" onClick={()=> this.setState({ record: false })} />
+        </div>
+        <Ripple container={this.container} record={this.state.record} test={test}>
           <div style={{height: '1000px', paddingTop: '30px', marginTop: '40px'}} ref={this.container}>
             {
               (() => {

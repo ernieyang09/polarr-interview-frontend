@@ -12,6 +12,48 @@ class Ripple extends Component {
 
 
   componentDidMount() {
+      
+      // const test = this.props.test.map((k, i) => {
+      //   // console.log(k)
+      //   return [k[0], k[1], k[2]- (this.props.test[i-1] ? this.props.test[i-1][2] : 0)]
+      // });
+      // console.log(test);
+      // this.props.test.forEach((v) => {
+      //   setTimeout(()=> {
+      //     this.setState({
+      //       show: true,
+      //       offsetX: v[0],
+      //       offsetY: v[1],
+      //       leave: v[3],
+      //     })
+      //   }, v[2]);
+      // })
+      // console.log(test);
+      // (async()=>{
+      //   for (let v of test) {
+      //     console.log(1)
+      //     await new Promise((resolve, reject) => {
+      //       this.setState({
+      //         show: true,
+      //         offsetX: v[0],
+      //         offsetY: v[1],
+      //       },() => {
+      //         setTimeout(()=> {
+      //           resolve()
+      //         },v[2])
+      //       })
+      //     })
+      //       // await new Promise((resolve, reject) => {
+      //       //   setTimeout(() => {
+      //       //     console.log(123)
+      //       //     resolve()
+      //       //   },5)
+      //       // })
+      //   }
+      // })()
+
+
+
     this.container = this.props.container.current;
     this.container.addEventListener('mousedown', (evt) => {
       this.drag = true;
@@ -41,7 +83,11 @@ class Ripple extends Component {
     });
   }
 
+  timeout;
+
   rippleStart = (evt) => {
+    console.log(evt)
+    window.d = this.container
     let pageX, pageY;
     const bounds = this.container.getBoundingClientRect();
     if (evt.type.includes('touch')) {
@@ -52,20 +98,53 @@ class Ripple extends Component {
       pageY = evt.pageY;
     }
 
-    // console.log(clientY, bounds.top)
-    // const offsetX = pageX - bounds.left;
-    // const offsetY = pageY - bounds.top;
+    if (this.props.record) {
+      if (this.timeout) {
+        window.cancelAnimationFrame(this.timeout);
+      }
+      this.timeout = window.requestAnimationFrame(() => {
 
-    // console.log(offsetY)
+            // Run our scroll functions
+        console.log( 'debounced' );
+        this.records.push([pageX, pageY, evt.timeStamp, false])
+
+      });
+    
+      
+    }
+    
 
     this.setState({ show: true, leave: false, offsetX: pageX - 20, offsetY: pageY - 20});
 
   }
 
-  rippleEnd = (a) => {
+  rippleEnd = ({pageX, pageY, timeStamp}) => {
+    if (this.props.record) {
+      if (this.timeout) {
+        window.cancelAnimationFrame(this.timeout);
+      }
+      this.timeout = window.requestAnimationFrame(() => {
+
+            // Run our scroll functions
+        console.log( 'debounced' );
+        this.records.push([pageX, pageY, timeStamp, true])
+
+      });
+    }
     this.setState({
       leave: true
     })
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.props.record !== prevProps.record) {
+      if (this.props.record) {
+        this.records = []
+      } else {
+        console.log(this.records)
+        localStorage.setItem("records", JSON.stringify(this.records));
+      }
+    }
   }
 
   componentWillUnmount() {
@@ -80,6 +159,7 @@ class Ripple extends Component {
 
   render() {
     const { offsetX, offsetY } = this.state;
+    // console.log(this.props)
     return (
       <>
         { this.state.show && 

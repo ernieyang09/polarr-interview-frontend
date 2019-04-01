@@ -9,12 +9,14 @@
   "author": "Ernie Yang <https://github.com/ernieyang09>",
   "license": "ISC",
   "dependencies": {
+    "@babel/runtime": "^7.4.2",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
   },
   "devDependencies": {
     "@babel/core": "^7.4.0",
     "@babel/plugin-proposal-class-properties": "^7.4.0",
+    "@babel/plugin-transform-runtime": "^7.4.0",
     "babel-eslint": "^10.0.1",
     "eslint": "^5.16.0",
     "eslint-plugin-import": "^2.16.0",
