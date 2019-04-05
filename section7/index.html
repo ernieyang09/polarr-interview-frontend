@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #glCanvas {
+      margin: 5px;
+      padding: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="glCanvas" width="640" height="480"></canvas>
+</body>
+
+<script>
+  const state = {
+    imgShader: {
+      init: false,
+      program: null,
+      attribLocations: {
+        positionLocation: null,
+        texcoordLocation: null,
+      },
+      uniformLocations: {
+        resolutionLocation: null,
+      }
+    },
+    drawShader: {
+      init: false,
+      program: null,
+      attribLocations: {
+        positionLocation: null,
+      },
+      uniformLocations: {
+        resolutionLocation: null,
+      }
+    },
+    ui: {
+      isDrag: false,
+      points: [111,180,111,180,108,180,107,180,106,180,105,180,104,179,104,177,103,174,103,170,103,163,103,156,103,149,104,142,106,135,110,129,115,122,121,115,128,109,137,104,154,94,169,89,186,85,206,81,216,80,249,77,258,77,275,77,291,77,306,77,317,80,329,85,336,89,344,95,350,102,356,111,359,121,362,132,364,146,364,159,364,171,364,182,364,193,360,203,357,211,351,219,345,227,339,232,332,238,325,244,318,248,309,252,299,257,288,260,277,262,265,264,252,265,240,265,234,266,223,266,213,266,205,266,197,266,191,265,186,264,181,262,178,260,175,258,172,256,172,255,169,252,168,251,168,249,167,248,166,246,166,244,166,243,165,242,165,241,165,241,165,240,165,239,165,239,165,238,164,237,164,236,164,235,163,234,163,233,163,232,163,231,162,230,162,229,162,228,162,227,161,227,161,226,161,226,160,225,160,224,160,224,159,223,158,223,158,221,158,221,157,220,157,218,157,217,157,215,157,214,156,212,156,211,156,209,156,208,156,207,156,206,156,205,156,204,155,203,155,203,155,202,155,202,155,202,154,202,154,202,154,202,154,202,154,203,154,203],
+    }
+  }
+</script>
+<script id="2dimg-vertex-shader" type="x-shader/x-vertex">
+  attribute vec2 a_position;
+  attribute vec2 a_texCoord;
+  
+  uniform vec2 u_resolution;
+  
+  varying vec2 v_texCoord;
+  
+  void main() {
+     // convert the rectangle from pixels to 0.0 to 1.0
+     vec2 zeroToOne = a_position / u_resolution;
+  
+     // convert from 0->1 to 0->2
+     vec2 zeroToTwo = zeroToOne * 2.0;
+  
+     // convert from 0->2 to -1->+1 (clipspace)
+     vec2 clipSpace = zeroToTwo - 1.0;
+  
+     gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+  
+     // pass the texCoord to the fragment shader
+     // The GPU will interpolate this value between points.
+     v_texCoord = a_texCoord;
+  }
+</script>
+<!-- fragment shader -->
+<script id="2dimg-fragment-shader" type="x-shader/x-fragment">
+  precision mediump float;
+
+// our texture
+uniform sampler2D u_image;
+
+// the texCoords passed in from the vertex shader.
+varying vec2 v_texCoord;
+
+void main() {
+    gl_FragColor = texture2D(u_image, v_texCoord);
+}
+</script>
+
+<script id="2d-draw-vertex-shader" type="x-shader/x-vertex">
+
+  // an attribute will receive data from a buffer
+  attribute vec2 a_position;
+  uniform vec2 u_resolution;
+ 
+  void main() {
+    vec2 zeroToOne = a_position / u_resolution;
+    vec2 zeroToTwo = zeroToOne * 2.0;
+    vec2 clipSpace = zeroToTwo - 1.0;
+    gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+  }
+
+</script>
+<script id="2d-draw-fragment-shader" type="x-shader/x-fragment">
+
+  // fragment shaders don't have a default precision so we need
+  // to pick one. mediump is a good default
+  precision mediump float;
+
+  void main() {
+    // gl_FragColor is a special variable a fragment shader
+    // is responsible for setting
+    gl_FragColor = vec4(1, 0, 0.5, 1); // return redish-purple
+  }
+
+</script>
+
+<script id="brightness-contrast-fs" type="x-shader/x-fragment">
+  uniform float brightness;
+  uniform float contrast;
+  uniform sampler2D tInput;
+  
+  varying vec2 vUv;
+  
+  void main() {
+  
+    vec3 color = texture2D(tInput, vUv).rgb;
+    vec3 colorContrasted = (color) * contrast;
+    vec3 bright = colorContrasted + vec3(brightness,brightness,brightness);
+    gl_FragColor.rgb = bright;
+    gl_FragColor.a = 1.;
+  
+  }
+</script>
+<script>
+  function loadImageAndCreateTextureInfo(url) {
+
+    return new Promise((resolve, reject) => {
+      var tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      // Fill the texture with a 1x1 blue pixel.
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+        new Uint8Array([0, 0, 255, 255]));
+
+      // let's assume all images are not a power of 2
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+      var img = new Image();
+      var textureInfo = {
+        width: 1, // we don't know the size until it loads
+        height: 1,
+        texture: tex,
+      };
+
+      img.addEventListener('load', function () {
+        textureInfo.width = img.width;
+        textureInfo.height = img.height;
+
+        gl.bindTexture(gl.TEXTURE_2D, textureInfo.texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        resolve(textureInfo)
+      });
+      img.src = url;
+    })
+
+  }
+
+  function usePointShaders() {
+    if (!state.drawShader.init) {
+      var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+      var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+      var vs_source = document.getElementById('2d-draw-vertex-shader').text,
+        fs_source = document.getElementById('2d-draw-fragment-shader').text;
+
+      gl.shaderSource(vertexShader, vs_source);
+      gl.shaderSource(fragmentShader, fs_source);
+
+      gl.compileShader(vertexShader);
+      gl.compileShader(fragmentShader);
+
+      var glProgram = gl.createProgram();
+      gl.attachShader(glProgram, vertexShader);
+      gl.attachShader(glProgram, fragmentShader);
+
+
+      state.drawShader.init = true;
+      state.drawShader.program = glProgram;
+    }
+    gl.linkProgram(state.drawShader.program);
+    gl.useProgram(state.drawShader.program);
+
+    state.drawShader.attribLocations.positionLocation = gl.getAttribLocation(state.drawShader.program, "a_position");
+    state.drawShader.uniformLocations.resolutionLocation = gl.getUniformLocation(state.drawShader.program, "u_resolution");
+
+    return state.drawShader
+  }
+
+  function useImgShaders() {
+    if (!state.imgShader.init) {
+      var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+      var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+      var vs_source = document.getElementById('2dimg-vertex-shader').text,
+        fs_source = document.getElementById('2dimg-fragment-shader').text;
+
+      gl.shaderSource(vertexShader, vs_source);
+      gl.shaderSource(fragmentShader, fs_source);
+
+      gl.compileShader(vertexShader);
+      gl.compileShader(fragmentShader);
+
+      var glProgram = gl.createProgram();
+      gl.attachShader(glProgram, vertexShader);
+      gl.attachShader(glProgram, fragmentShader);
+
+      gl.linkProgram(glProgram);
+      gl.useProgram(glProgram);
+
+      state.imgShader.program = glProgram;
+
+      state.imgShader.init = true;
+    }
+    gl.linkProgram(state.imgShader.program);
+    gl.useProgram(state.imgShader.program);
+
+    state.imgShader.attribLocations.positionLocation = gl.getAttribLocation(state.imgShader.program, "a_position");
+    state.imgShader.attribLocations.texcoordLocation = gl.getAttribLocation(state.imgShader.program, "a_texCoord");
+    state.imgShader.uniformLocations.resolutionLocation = gl.getUniformLocation(state.imgShader.program, "u_resolution");
+
+    return state.imgShader;
+  }
+
+  function setRectangle(gl, x, y, width, height) {
+    var x1 = x;
+    var x2 = x + width;
+    var y1 = y;
+    var y2 = y + height;
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      x1, y1,
+      x2, y1,
+      x1, y2,
+      x1, y2,
+      x2, y1,
+      x2, y2,
+    ]), gl.STATIC_DRAW);
+  }
+</script>
+
+
+<script>
+  main();
+
+
+  //
+  // start here
+  //
+  function main() {
+    const canvas = document.querySelector("#glCanvas");
+
+    // Initialize the GL context
+    const gl = canvas.getContext("webgl");
+    window.gl = gl;
+
+
+    // Only continue if WebGL is available and working
+    if (gl === null) {
+      alert("Unable to initialize WebGL. Your browser or machine may not support it.");
+      return;
+    }
+
+    // Set clear color to black, fully opaque
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+    // Clear the color buffer with specified clear color
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    loadImageAndCreateTextureInfo('./6268302.jpeg').then((test) => {
+      drawImg(test);
+    });
+
+
+    canvas.onmousedown = function (evt) {
+      state.ui.points = []
+      drawImg(cc)
+      state.isDrag = true;
+
+    }
+
+    canvas.onmousemove = function ({
+      offsetX,
+      offsetY
+    }) {
+      if (state.isDrag) {
+        state.ui.points.push(offsetX, offsetY)
+        drawImg(cc)
+      }
+    }
+
+    canvas.onmouseup = function (evt) {
+      state.isDrag = false;
+      
+    }
+    function drawtest() {
+      const a = usePointShaders();
+      const {
+        attribLocations: {
+          positionLocation
+        },
+        uniformLocations: {
+          resolutionLocation
+        }
+      } = a;
+
+
+
+      var positionBuffer = gl.createBuffer();      
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(state.ui.points), gl.STATIC_DRAW);
+
+      // Turn on the position attribute
+      gl.enableVertexAttribArray(positionLocation);
+
+      // Bind the position buffer.
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+      // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+      var size = 2; // 2 components per iteration
+      var type = gl.FLOAT; // the data is 32bit floats
+      var normalize = false; // don't normalize the data
+      var stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
+      var offset = 0; // start at the beginning of the buffer
+      gl.vertexAttribPointer(
+        positionLocation, size, type, normalize, stride, offset);
+
+      // set the resolution
+      gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
+
+      // Draw the rectangle.
+      var primitiveType = gl.TRIANGLE_FAN;
+      var offset = 0;
+      var count = state.ui.points.length / 2;
+      gl.drawArrays(primitiveType, offset, count); 
+    }
+    function drawLine() {
+      if (!state.ui.points.length) {
+        return;
+      }
+      const a = usePointShaders();
+      const {
+        attribLocations: {
+          positionLocation
+        },
+        uniformLocations: {
+          resolutionLocation
+        }
+      } = a;
+
+
+
+      var positionBuffer = gl.createBuffer();      
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(state.ui.points), gl.STATIC_DRAW);
+
+      // Turn on the position attribute
+      gl.enableVertexAttribArray(positionLocation);
+
+      // Bind the position buffer.
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+      // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+      var size = 2; // 2 components per iteration
+      var type = gl.FLOAT; // the data is 32bit floats
+      var normalize = false; // don't normalize the data
+      var stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
+      var offset = 0; // start at the beginning of the buffer
+      gl.vertexAttribPointer(
+        positionLocation, size, type, normalize, stride, offset);
+
+      // set the resolution
+      gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
+
+      // Draw the rectangle.
+      var primitiveType = gl.LINE_LOOP;
+      var offset = 0;
+      var count = state.ui.points.length / 2;
+      gl.drawArrays(primitiveType, offset, count);
+    }
+
+    function drawImg(image) {
+      window.cc = image
+      const a = useImgShaders();
+      const {
+        attribLocations: {
+          positionLocation,
+          texcoordLocation
+        },
+        uniformLocations: {
+          resolutionLocation
+        }
+      } = a;
+
+      gl.bindTexture(gl.TEXTURE_2D, image.texture);
+      var positionBuffer = gl.createBuffer();
+      
+      // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      // Set a rectangle the same size as the image.
+      setRectangle(gl, 0, 0, image.width, image.height);
+
+      var texcoordBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        0.0, 0.0,
+        1.0, 0.0,
+        0.0, 1.0,
+        0.0, 1.0,
+        1.0, 0.0,
+        1.0, 1.0,
+      ]), gl.STATIC_DRAW);
+      
+
+
+      // Tell WebGL how to convert from clip space to pixels
+      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+
+      // Turn on the position attribute
+      gl.enableVertexAttribArray(positionLocation);
+
+      // Bind the position buffer.
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+      // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+      var size = 2; // 2 components per iteration
+      var type = gl.FLOAT; // the data is 32bit floats
+      var normalize = false; // don't normalize the data
+      var stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
+      var offset = 0; // start at the beginning of the buffer
+      gl.vertexAttribPointer(
+        positionLocation, size, type, normalize, stride, offset);
+
+      // Turn on the teccord attribute
+      gl.enableVertexAttribArray(texcoordLocation);
+
+      // Bind the position buffer.
+      gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+
+      // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+      var size = 2; // 2 components per iteration
+      var type = gl.FLOAT; // the data is 32bit floats
+      var normalize = false; // don't normalize the data
+      var stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
+      var offset = 0; // start at the beginning of the buffer
+      gl.vertexAttribPointer(
+        texcoordLocation, size, type, normalize, stride, offset);
+
+      // set the resolution
+      gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
+
+      // Draw the rectangle.
+      var primitiveType = gl.TRIANGLES;
+      var offset = 0;
+      var count = 6;
+      gl.drawArrays(primitiveType, offset, count);
+
+      // drawLine()
+      drawtest()
+    }
+
+  }
+</script>
+
+</html>
