@@ -122,19 +122,22 @@ void main() {
 </script>
 
 <script id="brightness-contrast-fs" type="x-shader/x-fragment">
+  precision mediump float;
   uniform float brightness;
   uniform float contrast;
   uniform sampler2D tInput;
   
-  varying vec2 vUv;
+  varying vec2 v_texCoord;
   
   void main() {
   
-    vec3 color = texture2D(tInput, vUv).rgb;
+    vec3 color = texture2D(tInput, v_texCoord).rgb;
     vec3 colorContrasted = (color) * contrast;
     vec3 bright = colorContrasted + vec3(brightness,brightness,brightness);
     gl_FragColor.rgb = bright;
     gl_FragColor.a = 1.;
+
+
   
   }
 </script>
@@ -201,6 +204,7 @@ void main() {
     state.drawShader.attribLocations.positionLocation = gl.getAttribLocation(state.drawShader.program, "a_position");
     state.drawShader.uniformLocations.resolutionLocation = gl.getUniformLocation(state.drawShader.program, "u_resolution");
 
+
     return state.drawShader
   }
 
@@ -210,7 +214,7 @@ void main() {
       var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
       var vs_source = document.getElementById('2dimg-vertex-shader').text,
-        fs_source = document.getElementById('2dimg-fragment-shader').text;
+        fs_source = document.getElementById('brightness-contrast-fs').text;
 
       gl.shaderSource(vertexShader, vs_source);
       gl.shaderSource(fragmentShader, fs_source);
@@ -235,6 +239,12 @@ void main() {
     state.imgShader.attribLocations.positionLocation = gl.getAttribLocation(state.imgShader.program, "a_position");
     state.imgShader.attribLocations.texcoordLocation = gl.getAttribLocation(state.imgShader.program, "a_texCoord");
     state.imgShader.uniformLocations.resolutionLocation = gl.getUniformLocation(state.imgShader.program, "u_resolution");
+    
+
+    var test = gl.getUniformLocation(state.imgShader.program, "contrast");
+    var test2 = gl.getUniformLocation(state.imgShader.program, "brightness");
+    gl.uniform1f(test, 0.9);
+    gl.uniform1f(test2, 0.2);
 
     return state.imgShader;
   }
