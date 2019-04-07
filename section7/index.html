@@ -18,6 +18,7 @@
       padding: 5px;
     }
   </style>
+  <script src="http://r3mi.github.io/poly2tri.js/dist/poly2tri.js"></script>
 </head>
 
 <body>
@@ -47,9 +48,21 @@
         resolutionLocation: null,
       }
     },
+    brightShader: {
+      init: false,
+      program: null,
+      attribLocations: {
+        positionLocation: null,
+        texcoordLocation: null,
+      },
+      uniformLocations: {
+        resolutionLocation: null,
+      }
+    },
     ui: {
+      stack: [],
       isDrag: false,
-      points: [111,180,111,180,108,180,107,180,106,180,105,180,104,179,104,177,103,174,103,170,103,163,103,156,103,149,104,142,106,135,110,129,115,122,121,115,128,109,137,104,154,94,169,89,186,85,206,81,216,80,249,77,258,77,275,77,291,77,306,77,317,80,329,85,336,89,344,95,350,102,356,111,359,121,362,132,364,146,364,159,364,171,364,182,364,193,360,203,357,211,351,219,345,227,339,232,332,238,325,244,318,248,309,252,299,257,288,260,277,262,265,264,252,265,240,265,234,266,223,266,213,266,205,266,197,266,191,265,186,264,181,262,178,260,175,258,172,256,172,255,169,252,168,251,168,249,167,248,166,246,166,244,166,243,165,242,165,241,165,241,165,240,165,239,165,239,165,238,164,237,164,236,164,235,163,234,163,233,163,232,163,231,162,230,162,229,162,228,162,227,161,227,161,226,161,226,160,225,160,224,160,224,159,223,158,223,158,221,158,221,157,220,157,218,157,217,157,215,157,214,156,212,156,211,156,209,156,208,156,207,156,206,156,205,156,204,155,203,155,203,155,202,155,202,155,202,154,202,154,202,154,202,154,202,154,203,154,203],
+      points: [],
     }
   }
 </script>
@@ -214,7 +227,7 @@ void main() {
       var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
       var vs_source = document.getElementById('2dimg-vertex-shader').text,
-        fs_source = document.getElementById('brightness-contrast-fs').text;
+        fs_source = document.getElementById('2dimg-fragment-shader').text;
 
       gl.shaderSource(vertexShader, vs_source);
       gl.shaderSource(fragmentShader, fs_source);
@@ -243,10 +256,50 @@ void main() {
 
     var test = gl.getUniformLocation(state.imgShader.program, "contrast");
     var test2 = gl.getUniformLocation(state.imgShader.program, "brightness");
+
+    return state.imgShader;
+  }
+
+  function useBrightShaders() {
+    if (!state.brightShader.init) {
+      var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+      var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+      var vs_source = document.getElementById('2dimg-vertex-shader').text,
+        fs_source = document.getElementById('brightness-contrast-fs').text;
+
+      gl.shaderSource(vertexShader, vs_source);
+      gl.shaderSource(fragmentShader, fs_source);
+
+      gl.compileShader(vertexShader);
+      gl.compileShader(fragmentShader);
+
+      var glProgram = gl.createProgram();
+      gl.attachShader(glProgram, vertexShader);
+      gl.attachShader(glProgram, fragmentShader);
+
+      gl.linkProgram(glProgram);
+      gl.useProgram(glProgram);
+
+      state.brightShader.program = glProgram;
+
+      state.brightShader.init = true;
+    }
+
+    gl.linkProgram(state.brightShader.program);
+    gl.useProgram(state.brightShader.program);
+
+    state.brightShader.attribLocations.positionLocation = gl.getAttribLocation(state.brightShader.program, "a_position");
+    state.brightShader.attribLocations.texcoordLocation = gl.getAttribLocation(state.brightShader.program, "a_texCoord");
+    state.brightShader.uniformLocations.resolutionLocation = gl.getUniformLocation(state.brightShader.program, "u_resolution");
+    
+
+    var test = gl.getUniformLocation(state.brightShader.program, "contrast");
+    var test2 = gl.getUniformLocation(state.brightShader.program, "brightness");
     gl.uniform1f(test, 0.9);
     gl.uniform1f(test2, 0.2);
 
-    return state.imgShader;
+    return state.brightShader;
   }
 
   function setRectangle(gl, x, y, width, height) {
@@ -269,12 +322,13 @@ void main() {
 <script>
   main();
 
-
+  var timeout = false;
   //
   // start here
   //
   function main() {
     const canvas = document.querySelector("#glCanvas");
+
 
     // Initialize the GL context
     const gl = canvas.getContext("webgl");
@@ -293,14 +347,17 @@ void main() {
     // Clear the color buffer with specified clear color
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    loadImageAndCreateTextureInfo('./6268302.jpeg').then((test) => {
-      drawImg(test);
+    loadImageAndCreateTextureInfo('./6268302.jpeg').then((img) => {
+      window.cc = img;
+      state.ui.stack.push(['drawImg',[img]])
+      draw();
     });
+    
 
-
-    canvas.onmousedown = function (evt) {
-      state.ui.points = []
-      drawImg(cc)
+    canvas.onmousedown = function () {
+      state.ui.points = [];
+      draw();
+      drawLine();
       state.isDrag = true;
 
     }
@@ -310,31 +367,80 @@ void main() {
       offsetY
     }) {
       if (state.isDrag) {
-        state.ui.points.push(offsetX, offsetY)
-        drawImg(cc)
+        if (timeout) {
+          clearInterval(timeout);
+        }
+        requestAnimationFrame(() => {
+          state.ui.points.push(offsetX, offsetY);
+          draw();
+          drawLine();
+        })
+        
       }
     }
 
-    canvas.onmouseup = function (evt) {
+    canvas.onmouseup = function ({ offsetX, offsetY }) {
       state.isDrag = false;
+      requestAnimationFrame(() => {
+        state.ui.points.push(offsetX, offsetY);
+        const { points } = state.ui;
+        const contour = [];
+        const last = [-1, -1];
+        points.forEach((v,i) => {
+          if (i % 2) {
+            return;
+          }
+          if (points[i] == last[0] && points[i+1] == last[1]) {
+            return
+          }
+          
+          contour.push(new poly2tri.Point(points[i], points[i+1]));
+          last[0] = points[i];
+          last[1] = points[i+1];
+          
+        });
+        var swctx = new poly2tri.SweepContext(contour);
+        swctx.triangulate();
+        var triangles = swctx.getTriangles();
+        var triangle_points = triangles.reduce((a, t) => [
+          ...a,
+          t.points_[0].x,
+          t.points_[0].y,
+          t.points_[1].x,
+          t.points_[1].y,
+          t.points_[2].x,
+          t.points_[2].y,
+        ],[]);
+        state.ui.stack.push(['drawPolygon', [triangle_points]]);
+        draw()
+        drawLine()
+      })
+      
       
     }
-    function drawtest() {
-      const a = usePointShaders();
+
+    function draw() {
+      state.ui.stack.forEach(([fnName, args]) => {
+        let fn = func[fnName];
+        fn(...args);
+      })
+    }
+
+    function drawPolygon(points) {
+      const a = useBrightShaders();
       const {
         attribLocations: {
-          positionLocation
+          positionLocation,
+          texcoordLocation
         },
         uniformLocations: {
           resolutionLocation
         }
       } = a;
 
-
-
       var positionBuffer = gl.createBuffer();      
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(state.ui.points), gl.STATIC_DRAW);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
 
       // Turn on the position attribute
       gl.enableVertexAttribArray(positionLocation);
@@ -351,13 +457,36 @@ void main() {
       gl.vertexAttribPointer(
         positionLocation, size, type, normalize, stride, offset);
 
+      var texcoordBuffer = gl.createBuffer();
+      gl.bindTexture(gl.TEXTURE_2D, cc.texture);
+      gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+      
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points.map(p => p / 400)), gl.STATIC_DRAW);
+      
+      // Turn on the teccord attribute
+      gl.enableVertexAttribArray(texcoordLocation);
+
+      // Bind the position buffer.
+      gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+
+      // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+      var size = 2; // 2 components per iteration
+      var type = gl.FLOAT; // the data is 32bit floats
+      var normalize = false; // don't normalize the data
+      var stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
+      var offset = 0; // start at the beginning of the buffer
+      gl.vertexAttribPointer(
+        texcoordLocation, size, type, normalize, stride, offset);
+
       // set the resolution
       gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
 
+      
       // Draw the rectangle.
-      var primitiveType = gl.TRIANGLE_FAN;
+      var primitiveType = gl.TRIANGLES;
       var offset = 0;
-      var count = state.ui.points.length / 2;
+      var count = points.length / 2;
+      
       gl.drawArrays(primitiveType, offset, count); 
     }
     function drawLine() {
@@ -406,7 +535,6 @@ void main() {
     }
 
     function drawImg(image) {
-      window.cc = image
       const a = useImgShaders();
       const {
         attribLocations: {
@@ -418,7 +546,7 @@ void main() {
         }
       } = a;
 
-      gl.bindTexture(gl.TEXTURE_2D, image.texture);
+      
       var positionBuffer = gl.createBuffer();
       
       // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
@@ -426,7 +554,9 @@ void main() {
       // Set a rectangle the same size as the image.
       setRectangle(gl, 0, 0, image.width, image.height);
 
+      
       var texcoordBuffer = gl.createBuffer();
+      gl.bindTexture(gl.TEXTURE_2D, image.texture);
       gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
         0.0, 0.0,
@@ -437,8 +567,6 @@ void main() {
         1.0, 1.0,
       ]), gl.STATIC_DRAW);
       
-
-
       // Tell WebGL how to convert from clip space to pixels
       gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -482,10 +610,15 @@ void main() {
       var count = 6;
       gl.drawArrays(primitiveType, offset, count);
 
-      // drawLine()
-      drawtest()
+      drawLine();
+      // drawtest()
     }
 
+    const func = {
+      'drawImg': drawImg,
+      'drawLine': drawLine,
+      'drawPolygon': drawPolygon,
+    }
   }
 </script>
 
