@@ -10,7 +10,7 @@ import './style.scss'
 
 const Ripple = (props) => {
   const dispatch = useDispatch();
-  const mapState = useCallback(state => state.ui.cursor, [])
+  const mapState = useCallback(state => state.ui.cursor, []);
   const { offsetX, offsetY, isLeaving } = useMappedState(mapState);
   
   return (

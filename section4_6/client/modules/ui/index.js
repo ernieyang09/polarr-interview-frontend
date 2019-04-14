@@ -6,6 +6,9 @@ export const getInitialState = () => ({
     offsetY: null,
     isLeaving: true,
   },
+  button: {
+    color: 'red',
+  }
 });
 
 
@@ -13,7 +16,8 @@ export const getInitialState = () => ({
 /**
  * Constants
  */
-export const MOVE_CURSOR = `UI/MOVE_CURSOR`;
+export const MOVE_CURSOR = 'UI/MOVE_CURSOR';
+export const CHANGE_COLOR = 'UI/CHANGE_COLOR'
 
 
 
@@ -28,6 +32,13 @@ export default (state = getInitialState(), action = {}) => {
           ...action.cursor,
         },
       };
+    case CHANGE_COLOR:
+      return {
+        ...state,
+        button: {
+          color: action.color,
+        }
+      }
     default:
       return state;
   }
@@ -37,4 +48,9 @@ export default (state = getInitialState(), action = {}) => {
 export const moveCursor = (cursor) => ({
     type: MOVE_CURSOR,
     cursor,
+});
+
+export const changeColor = (color) => ({
+  type: CHANGE_COLOR,
+  color,
 });

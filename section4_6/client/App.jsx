@@ -9,6 +9,7 @@ import {
   Ripple,
   NullCanvas,
   Event,
+  ColorButton,
 } from './components';
 
 import events from './components/Ripple/event';
@@ -32,6 +33,7 @@ const App = () => {
       >
         <Ripple />
         <NullCanvas ref={ref}/>
+        <ColorButton />
       </Event>
     </StoreContext.Provider>
   )
