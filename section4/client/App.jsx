@@ -11,6 +11,7 @@ import {
   Event,
 } from './components';
 
+import events from './components/Ripple/event';
 
 
 
@@ -22,9 +23,13 @@ const store = createStore(
 
 const App = () => {
   const ref = React.createRef();
+
   return (
     <StoreContext.Provider value={store}>
-      <Event canvas={ref} >
+      <Event
+        canvas={ref}
+        event={events}
+      >
         <Ripple />
         <NullCanvas ref={ref}/>
       </Event>

@@ -4,6 +4,7 @@ export const getInitialState = () => ({
   cursor: {
     offsetX: null,
     offsetY: null,
+    isLeaving: true,
   },
 });
 
@@ -20,10 +21,12 @@ export const MOVE_CURSOR = `UI/MOVE_CURSOR`;
 export default (state = getInitialState(), action = {}) => {
   switch (action.type) {
     case MOVE_CURSOR:
-      
       return {
         ...state,
-        cursor: action.cursor,
+        cursor: {
+          ...state.cursor,
+          ...action.cursor,
+        },
       };
     default:
       return state;
