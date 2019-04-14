@@ -1,41 +1,43 @@
-import React , { Component } from 'react';
-import { createStore, applyMiddleware } from 'redux';
-import { composeWithDevTools } from 'redux-devtools-extension/logOnlyInProduction';
-import {StoreContext} from 'redux-react-hook';
+import React , { useState, useEffect } from 'react';
+import { useDispatch } from 'redux-react-hook';
 
-
-import modules from './modules';
 import { 
   Ripple,
   NullCanvas,
   Event,
   ColorButton,
+  RecordPanel,
 } from './components';
 
 import events from './components/Ripple/event';
 
 
 
-const store = createStore(
-  modules,
-  window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
-);
+
 
 
 const App = () => {
+
+  const dispatch = useDispatch();
+
+  useEffect(()=> {
+    console.log('update');
+  },[])
+
   const ref = React.createRef();
 
   return (
-    <StoreContext.Provider value={store}>
+    <>
       <Event
         canvas={ref}
         event={events}
-      >
-        <Ripple />
-        <NullCanvas ref={ref}/>
-        <ColorButton />
-      </Event>
-    </StoreContext.Provider>
+      />
+      <RecordPanel />
+      <Ripple />
+      <NullCanvas ref={ref}/>
+      <ColorButton />
+    </>
+
   )
 }
 

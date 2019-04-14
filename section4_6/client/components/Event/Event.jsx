@@ -20,11 +20,7 @@ const Event = (props) => {
   }, [container.current])
 
   return (
-    <>
-      {
-        props.children
-      }
-    </>
+    <></>
   )
 }
 
