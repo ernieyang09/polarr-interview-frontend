@@ -1,4 +1,5 @@
 
+
 let arr;
 export default ({ getState }) => next => (action) => {
   const state = getState();
@@ -11,7 +12,7 @@ export default ({ getState }) => next => (action) => {
   const new_state = getState();
 
   if (new_state.root.isRecording) {
-    arr.push([new Date().getTime(), action, new_state.ui])
+    arr.push([new Date().getTime(), action.record, new_state.ui])
   }
   
   return next_action;

@@ -1,9 +1,22 @@
 
 import equal from 'fast-deep-equal';
 
+
 import {
   setUIState,
+  moveCursor,
+  changeColor,
+  changeFakeColor,
 } from '../modules/ui';
+
+
+// change this to emit fake button click event
+const actions = {
+  moveCursor,
+  // changeColor,
+  changeColor: changeFakeColor,
+};
+
 
 const sleep = (time) => {
   return new Promise((resolve)=> {
@@ -30,14 +43,15 @@ export default ({ dispatch, getState }) => next => (action) => {
 
     (async()=> {
       for (const [i, r] of new_arr.entries()) {
-        dispatch(r.action)
+        const [funcName, args] = r.action;
+        dispatch(actions[funcName](...args))
         if (!equal(getState().ui, r.result)) {
           throw i
         }
         await sleep(r.time)
       }
-    })().catch((e) => {
-      alert(`Oops, something went wrong Reord: ${i}`);
+    })().catch((i) => {
+      alert(`Oops, something went wrong Record: ${i}`);
     })
 
     return

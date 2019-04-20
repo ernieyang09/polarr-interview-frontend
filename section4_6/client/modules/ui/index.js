@@ -53,12 +53,32 @@ export default (state = getInitialState(), action = {}) => {
 export const moveCursor = (cursor) => ({
     type: MOVE_CURSOR,
     cursor,
+    record: ['moveCursor', [cursor]],
 });
 
-export const changeColor = (color) => ({
-  type: CHANGE_COLOR,
-  color,
-});
+export const changeColor = (color) => {
+  const next = {
+    'red': 'blue',
+    'blue': 'yellow',
+    'yellow': 'red',
+  }[color];
+
+  return {
+    type: CHANGE_COLOR,
+    color: next,
+    record: ['changeColor', [color]],
+  }
+};
+
+export const changeFakeColor = (color) => {
+  const next = 'blue';
+
+  return {
+    type: CHANGE_COLOR,
+    color: next,
+    record: ['changeColor', [color]],
+  }
+};
 
 export const setUIState = (payload) => ({
   type: SET_UI_STATE,

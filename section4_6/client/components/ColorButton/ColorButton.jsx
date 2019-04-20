@@ -3,7 +3,7 @@ import { useDispatch, useMappedState } from "redux-react-hook";
 import styled from 'styled-components';
 
 import {
-  changeColor
+  changeColor,
 } from '../../modules/ui';
 
 
@@ -17,12 +17,7 @@ const ColorButton = () => {
     <StyledButton
       color={color}
       onClick={()=> {
-        const next = {
-          'red': 'blue',
-          'blue': 'yellow',
-          'yellow': 'red',
-        }[color];
-        dispatch(changeColor(next));
+        dispatch(changeColor(color));
 
       }}
     >
