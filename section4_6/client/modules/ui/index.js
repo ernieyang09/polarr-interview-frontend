@@ -18,6 +18,7 @@ export const getInitialState = () => ({
  */
 export const MOVE_CURSOR = 'UI/MOVE_CURSOR';
 export const CHANGE_COLOR = 'UI/CHANGE_COLOR';
+export const SET_UI_STATE = 'SET_UI_STATE';
 
 
 
@@ -39,6 +40,10 @@ export default (state = getInitialState(), action = {}) => {
           color: action.color,
         }
       }
+    case SET_UI_STATE:
+      return {
+        ...action.payload
+      };
     default:
       return state;
   }
@@ -54,3 +59,8 @@ export const changeColor = (color) => ({
   type: CHANGE_COLOR,
   color,
 });
+
+export const setUIState = (payload) => ({
+  type: SET_UI_STATE,
+  payload,
+})

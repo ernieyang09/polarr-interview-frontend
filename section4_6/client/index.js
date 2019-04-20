@@ -8,11 +8,15 @@ import { createStore, applyMiddleware } from 'redux';
 import App from './App';
 import modules from './modules';
 import recordMiddleware from './middleware/recordMiddleware';
+import replayMiddleware from './middleware/replayMiddleware';
 
 const store = createStore(
   modules,
   composeWithDevTools(
-    applyMiddleware(recordMiddleware)
+    applyMiddleware(
+      replayMiddleware,
+      recordMiddleware
+    )
   ),
 );
 

@@ -31,18 +31,13 @@ const App = () => {
           mode: 'edit',
         })
       }
-      const [tail, ...arr] = await res.json()
-      const new_arr = arr.map((x) => ({
-        action: JSON.parse(x.action),
-        result: JSON.parse(x.result),
-        time: x.time - tail.time,
-      }));
-
-      new_arr.forEach((r) => {
-        setTimeout(()=> {
-          dispatch(r.action)
-        }, r.time);
+      const arr = await res.json();
+      dispatch({
+        replay: true,
+        id,
+        payload: arr,
       })
+
     }
     if (id) {
       dispatch({
