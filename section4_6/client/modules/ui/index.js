@@ -17,7 +17,7 @@ export const getInitialState = () => ({
  * Constants
  */
 export const MOVE_CURSOR = 'UI/MOVE_CURSOR';
-export const CHANGE_COLOR = 'UI/CHANGE_COLOR'
+export const CHANGE_COLOR = 'UI/CHANGE_COLOR';
 
 
 
