@@ -13,8 +13,8 @@ import {
 // change this to emit fake button click event
 const actions = {
   moveCursor,
-  // changeColor,
-  changeColor: changeFakeColor,
+  changeColor,
+  // changeColor: changeFakeColor,
 };
 
 
