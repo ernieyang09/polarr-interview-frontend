@@ -1,6 +1,6 @@
 
 import equal from 'fast-deep-equal';
-
+import io from 'socket.io-client';
 
 import {
   setUIState,
@@ -25,11 +25,12 @@ const sleep = (time) => {
   })
 }
 
+const socket = io('http://localhost:3000');
+
 export default ({ dispatch, getState }) => next => (action) => {
   const state = getState();
   
   if (action.replay) {
-    
     const { id, payload } = action;
     const [tail, ...arr] = payload;
 
@@ -46,12 +47,19 @@ export default ({ dispatch, getState }) => next => (action) => {
         const [funcName, args] = r.action;
         dispatch(actions[funcName](...args))
         if (!equal(getState().ui, r.result)) {
-          throw i
+          throw [i, r.result, funcName]
         }
         await sleep(r.time)
       }
-    })().catch((i) => {
+      socket.emit('test_result', [new Date().getTime(), id, true]);
+    })().catch(([i , result, funcName]) => {
       alert(`Oops, something went wrong Record: ${i}`);
+      socket.emit('test_result', [new Date().getTime(), id, false, {
+        record: i,
+        action: funcName,
+        expected: result,
+        received: getState().ui,
+      }]);
     })
 
     return

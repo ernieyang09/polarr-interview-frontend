@@ -47,7 +47,6 @@ const App = () => {
       fetchData(id);
     }
     
-    console.log('update');
   },[])
 
   const ref = React.createRef();

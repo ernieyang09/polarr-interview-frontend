@@ -2,10 +2,27 @@ import {
   Record,
   RecordItem,
 } from '../models';
+import http from 'http';
 import express from 'express';
-const app = express();
 
-app.listen(3000, () => console.log('Listening on port 3000!'));
+const app = express();
+const httpServer = http.createServer(app);
+const ioServer = require('socket.io')(httpServer);
+
+ioServer.on('connection', client => {
+  client.on('test_result', data => { 
+    ioServer.sockets.in('/dashboard').emit('get_result', data);
+  });
+  client.on('join_dashboard', ()=> {
+    client.join('/dashboard');
+  })
+  client.on('leave_dashboard', ()=> {
+    client.leave('/dashboard');
+  })
+  client.on('disconnect', () => {});
+});
+
+httpServer.listen(3000, () => console.log('Listening on port 3000!'));
 app.use(express.json());
 app.use(express.static('dist'));
 
